@@ -4,4 +4,4 @@ __pycache__/
 venv/
 .env
 .ipynb_checkpoints/
-src/models/*.joblib
+src/models/*.joblib 
