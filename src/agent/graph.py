@@ -12,6 +12,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from langgraph.graph import StateGraph, END
 from groq import Groq
+from src.db.db_utils import insert_ticket_and_log
 
 # --- Load saved artifacts once at module level ---
 clf = joblib.load('src/models/priority_classifier.joblib')
@@ -150,6 +151,24 @@ Write a draft response a human agent could review and send, and briefly note (in
     state['response_text'] = response.choices[0].message.content
     return state
 
+# --- Node 5: log to database ---
+def log_to_db(state: TicketState) -> TicketState:
+    status = 'resolved' if state['action'] == 'auto_resolve' else 'pending_review'
+
+    ticket_id = insert_ticket_and_log(
+        subject=state['subject'],
+        body=state['body'],
+        ticket_type=state['ticket_type'],
+        queue=state['queue'],
+        predicted_priority=state['predicted_priority'],
+        action=state['action'],
+        response_text=state['response_text'],
+        status=status
+    )
+
+    print(f"Logged ticket to DB with ticket_id: {ticket_id}")
+    return state
+
 # --- Build the graph ---
 def build_agent_graph():
     workflow = StateGraph(TicketState)
@@ -159,6 +178,7 @@ def build_agent_graph():
     workflow.add_node("decide_action", decide_action)
     workflow.add_node("auto_resolve", auto_resolve)
     workflow.add_node("draft_escalation", draft_escalation)
+    workflow.add_node("log_to_db", log_to_db)
 
     workflow.set_entry_point("classify_ticket")
     workflow.add_edge("classify_ticket", "retrieve_similar")
@@ -173,8 +193,9 @@ def build_agent_graph():
         }
     )
 
-    workflow.add_edge("auto_resolve", END)
-    workflow.add_edge("draft_escalation", END)
+    workflow.add_edge("auto_resolve", "log_to_db")
+    workflow.add_edge("draft_escalation", "log_to_db")
+    workflow.add_edge("log_to_db", END)
 
     return workflow.compile()
 
