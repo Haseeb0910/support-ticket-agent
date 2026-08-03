@@ -1,0 +1,11 @@
+streamlit
+plotly
+pandas
+scikit-learn
+joblib
+faiss-cpu
+sentence-transformers
+langgraph
+groq
+python-dotenv
+scipy
