@@ -14,7 +14,6 @@ print(f"Processing {len(sample)} tickets through the agent...\n")
 
 for i, (_, row) in enumerate(sample.iterrows(), 1):
     print(f"[{i}/{len(sample)}] Processing: {row['subject'][:50]}...")
-    
     try:
         result = agent.invoke({
             'subject': row['subject'],
